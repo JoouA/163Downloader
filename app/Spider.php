@@ -67,7 +67,7 @@ class Spider
             'url' => $song_url_info['url'],
         ];
 
-        print_r($song_detail_info);
+//        print_r($song_detail_info);
 
         return  $this->crawler->downloadSong($song_detail_info);
     }

@@ -9,12 +9,18 @@
 namespace App;
 
 use GuzzleHttp\Client;
+use App\ProgressBar\Manager;
 
 class Crawler
 {
     private $headers = [];
     private $client;
     private $encrypyed;
+    protected $bar;
+    private $progressBar;
+
+    // 是否下载完成
+    protected $downloaded = false;
 
     public function __construct()
     {
@@ -30,6 +36,8 @@ class Crawler
         ];
 
         $this->encrypyed = new Encrypyed();
+
+        $this->progressBar = new Manager(0, 100);
     }
 
     /**
@@ -161,19 +169,29 @@ class Crawler
             $fp = fopen($folder . DIRECTORY_SEPARATOR . $filename, 'w');
 
             curl_setopt($ch, CURLOPT_URL, $song_detail_info['url']);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT,10);
-            curl_setopt($ch, CURLOPT_TIMEOUT,100);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 100);
+            // 进度条的触发函数
+            // 每次都要实例化一下对象，不然foreach在此进来就找不到progress这个方法了
+            curl_setopt($ch, CURLOPT_PROGRESSFUNCTION, array(new self(), 'progress'));
+            // 是否开启进度条  0 表示开启下载进度条
+            curl_setopt($ch, CURLOPT_NOPROGRESS, 0);
+            // 1 的时候不输出现在的内容 0 输出
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+
             curl_setopt($ch, CURLOPT_FILE, $fp);
+
 
             // 执行后返回true或者false
             $response = curl_exec($ch);
 
-            curl_close($ch);
-
             fclose($fp);
 
+            curl_close($ch);
+
+
             if ($response) {
+                $this->progressBar->update(100);
                 return $response = 'success';
             } else {
                 return $response = 'fail';
@@ -202,6 +220,49 @@ class Crawler
         ]);
 
         return json_decode($response->getBody(), true);
+    }
+
+
+    /**
+     * 进度条下载.
+     *
+     * @param $resource
+     * @param $countDownloadSize 总下载量
+     * @param $currentDownloadSize 当前下载量
+     * @param $countUploadSize
+     * @param $currentUploadSize
+     */
+    public function progress($resource, $countDownloadSize, $currentDownloadSize, $countUploadSize, $currentUploadSize)
+    {
+
+        // 等于 0 的时候，应该是预读资源不等于0的时候即开始下载
+        // 这里的每一个判断都是坑，多试试就知道了
+        if (0 === $countDownloadSize) {
+            return false;
+        }
+        // 有时候会下载两次，第一次很小，应该是重定向下载
+        if ($countDownloadSize > $currentDownloadSize) {
+            $this->downloaded = false;
+            // 继续显示进度条
+        } // 已经下载完成还会再发三次请求
+        elseif ($this->downloaded) {
+            return false;
+        } // 两边相等下载完成并不一定结束，
+        elseif ($currentDownloadSize === $countDownloadSize) {
+            return false;
+        }
+
+        $curl_info = curl_getinfo($resource);
+
+        $size_download = $curl_info['size_download'];
+        $size_content_length = $curl_info['download_content_length'];
+
+        if ($size_content_length > 0) {
+            $percentage = intval(($size_download / $size_content_length) * 100);
+            if ($percentage <= 100) {
+                $this->progressBar->update($percentage);
+            }
+        }
     }
 
 }
