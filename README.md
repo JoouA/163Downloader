@@ -51,6 +51,16 @@ $sing_name = 'Heal the World';
 $spride->download($song_name);
 ```
 
+#### Author
+
+---
+- [Weitao Tang](https://github.com/JoouA)
+
+#### Thanks
+
+---
+- [metowolf](https://github.com/metowolf/Meting)
+
 
 
 
