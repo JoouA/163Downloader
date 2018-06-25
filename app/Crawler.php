@@ -80,25 +80,36 @@ class Crawler
 
         $song_all_infos = $this->search($url, $paramsInfo)['result']['songs'][0];
 
-
-        $song_format_infos = [
-            'id' => $song_all_infos['id'],
-            'name' => $song_all_infos['name'],
-            'article' => [],
-            'album' => $song_all_infos['al']['name'],
-            'album_pic' => $song_all_infos['al']['picUrl'],
-            'lyric_id' => $song_all_infos['id'],
-            'mv_id' => $song_all_infos['mv'],
-            'publishTime' => date('Y-m-d', $song_all_infos['publishTime'] / 1000),
-        ];
-
-        foreach ($song_all_infos['ar'] as $song_ar_info) {
-            $song_format_infos['article'][] = $song_ar_info['name'];
-        }
+        $song_format_infos = $this->songInfoFormat($song_all_infos);
 
         return $song_format_infos;
     }
 
+    /**
+     * 格式化歌曲信息
+     * @param $song_info
+     * @return array
+     */
+    private  function songInfoFormat($song_info)
+    {
+        $format_song_infos =  [
+            'id' => $song_info['id'],
+            'name' => $song_info['name'],
+            'article' => [],
+            'album' => $song_info['al']['name'],
+            'album_pic' => $song_info['al']['picUrl'],
+            'lyric_id' => $song_info['id'],
+            'mv_id' => $song_info['mv'],
+            'publishTime' => date('Y-m-d', $song_info['publishTime'] / 1000),
+        ];
+
+        foreach ($song_info['ar'] as $song_ar_info) {
+            $format_song_infos['article'][] = $song_ar_info['name'];
+        }
+
+        return $format_song_infos;
+
+    }
 
     /**
      * 搜索歌曲
@@ -202,6 +213,53 @@ class Crawler
         }
 
     }
+
+
+    /**
+     * 返回歌单的信息
+     * @param $id
+     * @return array
+     */
+    public function getPlayList($id)
+    {
+        $url = 'http://music.163.com/weapi/v3/playlist/detail';
+        $params = [
+            'body'   => [
+                's'  => '0',
+                'id' => $id,
+                'n'  => '1000',
+                't'  => '0',
+            ],
+        ];
+
+        $paramsInfo = $this->encrypyed->neteaseAESCBC($params);
+
+        $info =  $this->guzzle($url,$paramsInfo);
+
+        $creator =  $info['playlist']['creator'];
+        $tracks = $info['playlist']['tracks'];
+
+        $songs = [];
+
+        foreach ($tracks as $track) {
+            $songs[] = $this->songInfoFormat($track);
+        }
+
+
+        $play_list_info_format = [
+            'Author' => [
+                'nickname' => $creator['nickname'],
+                'signature' => $creator['signature'],
+                'avatarUrl' => $creator['avatarUrl'],
+            ],
+            'songs' => $songs,
+            'trackCount' => $info['playlist']['trackCount'],
+            'coverImgUrl' => $info['playlist']['coverImgUrl'],
+        ];
+
+        return $play_list_info_format;
+    }
+
 
 
     /**

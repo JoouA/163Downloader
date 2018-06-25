@@ -2,23 +2,13 @@
 require 'vendor/autoload.php';
 use  App\Spider;
 
-$music_list = file('list.txt');
-
 $spider = new Spider();
 // 填入自己的cookie，不设置就使用默认cookie
-//$spider->setCookie();
+//$spider->setCookie('');
 
-if (count($music_list)) {
-    foreach ($music_list as $song) {
-        $response = '';
-        echo trim($song) . ">>>" . "下载中:" . PHP_EOL;
-        $response = $spider->download($song);
-        if ($response == 'success') {
-            echo '下载成功' . PHP_EOL;
-        } else {
-            echo '下载失败' . PHP_EOL;
-        }
-    }
-} else {
-    echo '歌曲列表不能为空!' . PHP_EOL;
-}
+//通过list.txt内容下载歌曲
+/*$music_list = file('list.txt');
+$spider->downloadByListFile($music_list);*/
+
+//下载歌单，473157676是歌单的ID
+$spider->downLoadPlayList(473157676);
